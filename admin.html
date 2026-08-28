@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Booking Admin — Adventure Cruises Malta</title>
+<style>
+body{font-family:Arial,sans-serif;background:#faf5ea;color:#0a1f30;margin:0}
+.top{background:#07223a;color:#fff;padding:22px 30px;display:flex;justify-content:space-between;gap:20px;align-items:center}
+.wrap{padding:25px;overflow:auto}
+button{padding:9px 13px;border:0;border-radius:8px;background:#0e3554;color:#fff;cursor:pointer}
+button.secondary{background:#eee;color:#0a1f30}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top}
+th{background:#0e3554;color:#fff;font-size:12px}
+select{padding:7px}
+.muted{color:#667}
+.note{background:#fff;padding:16px;border-radius:12px;margin-bottom:18px}
+</style>
+</head>
+<body>
+<div class="top">
+  <strong>Adventure Cruises — Local Booking Admin</strong>
+  <div>
+    <button id="export">Export JSON</button>
+    <button id="clear" class="secondary">Clear local bookings</button>
+  </div>
+</div>
+<div class="wrap">
+  <div class="note">
+    <strong>GitHub Pages limitation:</strong> this page can only see bookings saved in the
+    current browser. It is not a server-side admin panel. The public booking form also
+    prepares an email to info@adventurecruisesmalta.com.
+  </div>
+  <table>
+    <thead><tr><th>Reference</th><th>Date / time</th><th>Customer</th><th>Tour</th><th>People</th><th>Status</th><th>Message</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+<script>
+const KEY='adventure-cruises-bookings-v1';
+function get(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+function save(x){localStorage.setItem(KEY,JSON.stringify(x))}
+function render(){
+ const rows=document.getElementById('rows');
+ const data=get().slice().reverse();
+ rows.innerHTML=data.length?data.map(b=>`
+ <tr>
+  <td><strong>${esc(b.reference)}</strong><br><span class="muted">${esc(b.created_at||'')}</span></td>
+  <td>${esc(b.bookingDate||'')}<br>${esc(b.bookingTime||'')}</td>
+  <td>${esc((b.fname||'')+' '+(b.lname||''))}<br>${esc(b.email||'')}<br>${esc(b.phone||'')}</td>
+  <td>${esc(b.tour||'')}</td>
+  <td>${esc(String(b.persons||''))}</td>
+  <td><select data-ref="${esc(b.reference)}"><option ${b.status==='pending'?'selected':''}>pending</option><option ${b.status==='confirmed'?'selected':''}>confirmed</option><option ${b.status==='cancelled'?'selected':''}>cancelled</option></select></td>
+  <td>${esc(b.message||'—')}</td>
+ </tr>`).join(''):'<tr><td colspan="7">No bookings in this browser.</td></tr>';
+ document.querySelectorAll('select[data-ref]').forEach(s=>s.addEventListener('change',()=>{
+   const all=get(), item=all.find(x=>x.reference===s.dataset.ref); if(item){item.status=s.value;save(all);render();}
+ }));
+}
+function esc(v){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+document.getElementById('export').onclick=()=>{
+ const blob=new Blob([JSON.stringify(get(),null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='adventure-cruises-bookings.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+document.getElementById('clear').onclick=()=>{
+ if(confirm('Delete all bookings stored in this browser?')){localStorage.removeItem(KEY);render();}
+};
+render();
+</script>
+</body>
+</html>
